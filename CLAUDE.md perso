@@ -1,0 +1,116 @@
+# Cinematic Scroll Websites (Grapheon Studio)
+
+Build premium, scroll-driven websites like the "wow effect" sites seen on Instagram: a striking hero (often a 3D globe or object), huge typography, pinned sections that animate as you scroll, scroll-scrubbed video, counters, and smooth scrolling. Every site must feel custom for the client's industry, not templated.
+
+## Stack (default)
+
+- **Vite + vanilla JS** (or Next.js if the client needs a CMS or many pages)
+- **GSAP + ScrollTrigger** for all scroll animation
+- **Lenis** for smooth scrolling, connected to ScrollTrigger:
+  ```js
+  const lenis = new Lenis();
+  lenis.on('scroll', ScrollTrigger.update);
+  gsap.ticker.add((t) => lenis.raf(t * 1000));
+  gsap.ticker.lagSmoothing(0);
+  ```
+- **Three.js** for 3D (globe, product, particles). Keep it to one 3D scene per page.
+- **SplitType** (or similar) for per-line and per-character text reveals
+- Plain CSS with custom properties. No UI kits.
+
+Pin exact library versions in `package.json`. Do not use unpinned or `latest` versions.
+
+## Page structure
+
+1. **Hero**: the single most memorable moment. Full-screen, one idea (3D globe, video loop, or big type). Headline visible within 1 second, even before heavy assets load.
+2. **Statement section**: oversized text that reveals line by line while pinned.
+3. **Proof section**: counters (e.g. 2,500+ / 98.2% / 8+) that count up when entering view.
+4. **Scroll-scrubbed sections** (2 to 4): each one tells one part of the story, using a video or image sequence tied to scroll progress.
+5. **Testimonials / case studies**: quiet and readable, no heavy effects.
+6. **CTA + footer**: simple, fast, one clear action.
+
+Not every site needs all six. Cut sections that don't serve the client's story.
+
+## Scroll choreography rules
+
+- Motion is the concept here, so **choreograph it, don't sprinkle it**. Every animation must have a reason: reveal, transition, or show progress. No generic fade-up on every block.
+- Use `scrub: true` (or `scrub: 0.5`) for anything that should follow the scrollbar, and `pin: true` for sections that hold while content changes.
+- Scroll-scrubbed video: preload the video, set `video.currentTime` from ScrollTrigger progress. For smoothest results, use an **image sequence on canvas** (frames drawn by progress) instead of a `<video>` element.
+- Text reveals: split into lines, animate `yPercent` from 100 to 0 inside an `overflow: hidden` wrapper. Keep stagger small (0.05 to 0.1s).
+- Counters: animate a number object with GSAP and format with `toLocaleString`.
+- Parallax: small values only (10 to 20%). Large parallax looks cheap.
+- Always call `ScrollTrigger.refresh()` after fonts and images load.
+- Respect `prefers-reduced-motion`: disable scrub and pinning, show content statically.
+
+## Asset pipeline
+
+I (Claude) cannot generate video or 3D renders. The user supplies assets. Ask for them up front, and compress them yourself.
+
+Expected assets per project: hero visual, 2 to 4 scroll-scrub clips, logo, 3 to 6 photos, real copy.
+
+Convert a clip into a scroll-scrub image sequence:
+```bash
+mkdir -p public/frames
+ffmpeg -i input.mp4 -vf "fps=24,scale=1280:-1" -q:v 4 public/frames/f_%04d.webp
+```
+Keep sequences under ~150 frames and under ~8 MB total per section.
+
+Compress video for web:
+```bash
+ffmpeg -i input.mp4 -vf "scale=1920:-2" -c:v libx264 -crf 26 -preset slow -an -movflags +faststart out.mp4
+```
+
+If no assets exist yet, build with clearly labeled placeholders (gradient or solid blocks) and tell the user exactly which asset goes where. Never use stock photos with unclear licenses.
+
+## Design rules
+
+Plan before coding. Write a short design plan with:
+- **Color**: 4 to 6 named hex values specific to the client's industry
+- **Type**: one or two typefaces with clear roles (loaded locally or from Google Fonts, with fallbacks)
+- **Layout**: a one-sentence concept plus an ASCII wireframe per section
+- **Principle**: the one thing that makes this site memorable
+
+Then check the plan: if it looks like what you would produce for any similar site, change it.
+
+Avoid these generated-site tells:
+- Cream background with serif headline and terracotta accent
+- Near-black background with one acid-green accent used by default
+- Identical rounded cards with the same soft shadow
+- ALL-CAPS tracked eyebrow label above every heading
+- Highlighting one word in a headline with a different color or italic
+- Numbered markers (01 / 02 / 03) when the content is not a sequence
+- "→" appended to every button
+
+Spend boldness in one place. Let the hero or one scroll moment be memorable and keep everything around it quiet.
+
+Copy: write for the end customer. Specific beats clever. Buttons say what happens ("Get a quote", not "Submit"). No filler.
+
+## Performance and quality floor
+
+- Lighthouse performance 80+ on mobile. LCP under 2.5s.
+- Lazy-load everything below the hero. Use WebP/AVIF for images, `preload` only the hero asset.
+- Mobile: swap heavy 3D and image sequences for a lighter version (static image or short loop). Test at 390px wide.
+- Visible keyboard focus, sufficient contrast, alt text on images, real `<h1>` to `<h3>` structure.
+- Test with real scroll speed. If it stutters, reduce canvas size or frame count before adding anything.
+
+## Workflow for every project
+
+1. Read the client brief (template below). If the industry or audience is unclear, ask one question and propose an answer.
+2. Write the design plan (above) and show it before building.
+3. Scaffold the project, build the hero first, then each section in order.
+4. Take screenshots with Playwright at 1440px and 390px after each section and critique them honestly. Fix before moving on.
+5. Run a production build, check for console errors, and report the bundle and asset sizes.
+6. Deploy to Vercel or Netlify when asked.
+
+## Client brief template
+
+```
+Client name:
+Industry:
+Target customer:
+Main goal of the site (calls, quotes, bookings, sales):
+Brand colors / logo (if any):
+3 sites they like:
+Assets available (videos, renders, photos):
+Real copy available? (yes / no)
+Languages:
+```
